@@ -1,0 +1,22 @@
+{
+  "Project": "Telecom Customer Churn Prediction",
+  "Dataset": "Indian Telecom Dataset (Chaitanya)",
+  "Total_Customers": 99999,
+  "Total_Features": 153,
+  "Churn_Rate_%": 10.19,
+  "Best_Model": "XGBoost (Tuned)",
+  "Best_Accuracy": 0.9401,
+  "Best_Precision": 0.7354,
+  "Best_Recall": 0.6438,
+  "Best_F1": 0.6866,
+  "Best_AUC": 0.9381,
+  "RED_Customers": 7396,
+  "YELLOW_Customers": 3279,
+  "GREEN_Customers": 89324,
+  "Engineered_Features": 22,
+  "SMOTE_Applied": true,
+  "Tuning_Method": "RandomizedSearchCV",
+  "Tuning_Iterations": 50,
+  "CV_Folds": 5,
+  "Saved_At": "2026-05-15 11:53:53"
+}
