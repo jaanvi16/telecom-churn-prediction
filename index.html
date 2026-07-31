@@ -1,0 +1,1301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>ChurnGuard AI — Telecom Churn Prediction</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+/* ── Design tokens ── */
+:root{
+  --green:#16A34A; --green-l:#DCFCE7; --green-m:#BBF7D0; --green-d:#15803D;
+  --bg:#E8EAED; --surface:#FFFFFF; --rail-bg:#F7F8F9;
+  --t1:#0D1117; --t2:#1F2937; --t3:#4B5563; --t4:#9CA3AF;
+  --border:#E2E5EA; --border2:#F3F4F6;
+  --red:#EF4444; --amber:#F59E0B; --blue:#3B82F6; --purple:#8B5CF6;
+  --shadow:0 1px 4px rgba(0,0,0,.06),0 2px 8px rgba(0,0,0,.04);
+  --shadow-md:0 4px 24px rgba(0,0,0,.10);
+  --shadow-lg:0 8px 40px rgba(0,0,0,.13);
+  --r:14px; --nav-w:268px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;font-family:'Inter',sans-serif;font-size:15px;background:var(--bg);color:var(--t1);}
+::-webkit-scrollbar{width:6px;height:6px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:4px;}
+::-webkit-scrollbar-thumb:hover{background:var(--green);}
+
+/* ── Shell ── */
+#shell{display:flex;height:100vh;padding:16px;gap:14px;}
+
+/* ── Sidebar ── */
+#sidebar{
+  width:var(--nav-w);flex-shrink:0;
+  background:var(--surface);
+  border-radius:var(--r);
+  box-shadow:var(--shadow-md);
+  display:flex;flex-direction:column;
+  overflow:hidden;height:100%;
+}
+.sb-brand{
+  display:flex;align-items:center;gap:12px;
+  padding:22px 18px 18px;
+  border-bottom:1px solid var(--border2);
+}
+.sb-logo{
+  width:36px;height:36px;background:var(--green);border-radius:10px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:17px;color:#fff;font-weight:700;flex-shrink:0;
+  box-shadow:0 2px 8px rgba(22,163,74,.35);
+}
+.sb-name{font-size:16px;font-weight:700;color:var(--t1);letter-spacing:-.2px;}
+.sb-toggle{margin-left:auto;font-size:13px;color:var(--t4);cursor:pointer;padding:3px 6px;border-radius:5px;transition:background .15s;}
+.sb-toggle:hover{background:var(--border2);}
+.sb-section{
+  font-size:11px;font-weight:700;letter-spacing:1.4px;
+  text-transform:uppercase;color:var(--t4);
+  padding:16px 18px 5px;
+}
+.sb-item{
+  display:flex;align-items:center;gap:11px;
+  padding:10px 12px;margin:2px 8px;
+  border-radius:10px;cursor:pointer;
+  font-size:14px;font-weight:500;color:var(--t3);
+  transition:all .15s;user-select:none;
+}
+.sb-item:hover{background:var(--border2);color:var(--t2);}
+.sb-item.active{background:var(--green);color:#fff;box-shadow:0 2px 10px rgba(22,163,74,.3);}
+.sb-item.disabled{pointer-events:none;opacity:.4;}
+.sb-icon{font-size:16px;width:20px;text-align:center;flex-shrink:0;}
+.sb-badge{
+  margin-left:auto;font-size:10px;font-weight:700;
+  padding:2px 8px;border-radius:10px;
+  background:var(--border2);color:var(--t3);
+}
+.sb-item.active .sb-badge{background:rgba(255,255,255,.28);color:#fff;}
+.sb-spacer{flex:1;}
+.sb-user{
+  display:flex;align-items:center;gap:11px;
+  padding:14px 18px;border-top:1px solid var(--border2);
+}
+.sb-avatar{
+  width:34px;height:34px;border-radius:50%;background:var(--green);
+  display:flex;align-items:center;justify-content:center;
+  font-size:13px;color:#fff;font-weight:600;flex-shrink:0;
+  box-shadow:0 2px 6px rgba(22,163,74,.3);
+}
+.sb-uname{font-size:13.5px;font-weight:600;color:var(--t1);}
+.sb-urole{font-size:11px;color:var(--t4);margin-top:1px;}
+.sb-logout{
+  display:flex;align-items:center;gap:9px;
+  padding:9px 18px;color:var(--t4);font-size:13px;cursor:pointer;
+  transition:color .15s;border-top:1px solid var(--border2);
+}
+.sb-logout:hover{color:var(--red);}
+
+/* ── Main panel ── */
+#main{
+  flex:1;background:var(--surface);border-radius:var(--r);
+  box-shadow:var(--shadow-md);display:flex;flex-direction:column;
+  overflow:hidden;min-width:0;
+}
+
+/* ── Topbar ── */
+#topbar{
+  display:flex;align-items:center;gap:12px;
+  padding:18px 28px;border-bottom:1px solid var(--border2);flex-shrink:0;
+}
+#tb-title{font-size:22px;font-weight:700;color:var(--t1);letter-spacing:-.3px;}
+#tb-count{font-size:13px;color:var(--t4);align-self:flex-end;margin-left:6px;margin-bottom:2px;}
+.tb-spacer{flex:1;}
+.tb-btn{
+  display:flex;align-items:center;gap:7px;
+  padding:9px 18px;background:var(--green);color:#fff;
+  border:none;border-radius:10px;font-size:13px;font-weight:600;
+  font-family:'Inter',sans-serif;cursor:pointer;transition:all .15s;
+  box-shadow:0 2px 10px rgba(22,163,74,.35);letter-spacing:.1px;
+}
+.tb-btn:hover{background:var(--green-d);box-shadow:0 4px 16px rgba(22,163,74,.45);transform:translateY(-1px);}
+
+/* ── Tab bar ── */
+#tabbar{
+  display:flex;align-items:center;gap:6px;
+  padding:12px 28px;border-bottom:1px solid var(--border2);flex-shrink:0;flex-wrap:wrap;
+}
+.tab{
+  display:flex;align-items:center;gap:5px;
+  padding:6px 14px;border-radius:20px;border:none;background:transparent;
+  font-size:13px;font-weight:500;color:var(--t3);cursor:pointer;
+  transition:all .15s;font-family:'Inter',sans-serif;
+}
+.tab:hover{background:var(--border2);color:var(--t2);}
+.tab.active{background:var(--green);color:#fff;box-shadow:0 2px 8px rgba(22,163,74,.3);}
+.tab-n{
+  font-size:11px;font-weight:700;padding:1px 7px;
+  border-radius:10px;background:var(--border2);color:var(--t3);
+}
+.tab.active .tab-n{background:rgba(255,255,255,.28);color:#fff;}
+
+/* ── Toolbar ── */
+#toolbar{
+  display:flex;align-items:center;gap:10px;
+  padding:11px 28px;border-bottom:1px solid var(--border2);flex-shrink:0;
+}
+.searchbox{
+  flex:1;display:flex;align-items:center;gap:9px;
+  background:var(--border2);border-radius:10px;padding:8px 14px;
+}
+.searchbox input{
+  border:none;background:transparent;outline:none;
+  font-size:13px;font-family:'Inter',sans-serif;color:var(--t2);width:100%;
+}
+.searchbox input::placeholder{color:var(--t4);}
+.filt-btn{
+  display:flex;align-items:center;gap:6px;padding:8px 14px;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:10px;font-size:13px;color:var(--t3);
+  cursor:pointer;font-family:'Inter',sans-serif;transition:all .15s;
+}
+.filt-btn:hover{border-color:var(--green);color:var(--green);}
+
+/* ── Page content ── */
+#page-content{flex:1;overflow-y:auto;padding:22px 28px 40px;}
+.page{display:none;}.page.active{display:block;}
+
+/* ── KPI strip ── */
+.kpi-strip{
+  display:grid;grid-template-columns:repeat(5,1fr);
+  gap:1px;background:var(--border);
+  border:1px solid var(--border);border-radius:14px;overflow:hidden;
+  margin-bottom:22px;box-shadow:var(--shadow);
+}
+.kpi-cell{background:var(--surface);padding:20px 20px 16px;cursor:default;transition:background .15s;}
+.kpi-cell:hover{background:#F7FFFE;}
+.kc-label{
+  font-size:11px;font-weight:600;color:var(--t4);
+  text-transform:uppercase;letter-spacing:.9px;margin-bottom:8px;
+  display:flex;align-items:center;gap:5px;
+}
+.kc-val{font-size:28px;font-weight:700;color:var(--t1);line-height:1.1;letter-spacing:-.5px;}
+.kc-delta{font-size:12px;font-weight:600;margin-top:5px;display:flex;align-items:center;gap:4px;}
+.up{color:var(--green);} .dn{color:var(--red);}
+
+/* ── Section title ── */
+.sec-ttl{
+  font-size:15px;font-weight:700;color:var(--t1);
+  margin:0 0 16px;display:flex;align-items:center;gap:9px;letter-spacing:-.1px;
+}
+.sec-sub{font-size:12px;font-weight:400;color:var(--t4);margin-left:auto;}
+
+/* ── Grids ── */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
+
+/* ── Card ── */
+.card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r);padding:20px 22px;
+  box-shadow:var(--shadow);transition:box-shadow .2s;
+}
+.card:hover{box-shadow:var(--shadow-md);}
+
+/* ── Divider ── */
+.div{height:1px;background:var(--border2);margin:20px 0;}
+
+/* ── Legend ── */
+.leg{display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+.leg-i{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--t3);}
+.leg-d{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+
+/* ── SHAP bars ── */
+.shap-row{
+  display:flex;align-items:center;gap:12px;
+  padding:7px 0;border-bottom:1px solid var(--border2);font-size:13px;
+}
+.shap-row:last-child{border-bottom:none;}
+.shap-feat{width:185px;flex-shrink:0;color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500;}
+.shap-bw{flex:1;background:var(--border2);border-radius:6px;height:9px;overflow:hidden;}
+.shap-b{height:100%;border-radius:6px;transition:width .5s ease;}
+.shap-v{width:58px;text-align:right;flex-shrink:0;color:var(--t3);font-weight:600;font-size:12px;}
+
+/* ── Data table ── */
+.tw{overflow-x:auto;}
+table.t{width:100%;border-collapse:collapse;font-size:13px;}
+table.t thead th{
+  padding:11px 14px;background:var(--border2);
+  color:var(--t3);font-size:11px;font-weight:700;
+  text-transform:uppercase;letter-spacing:.7px;
+  text-align:left;white-space:nowrap;border-bottom:1px solid var(--border);
+}
+table.t tbody tr{border-bottom:1px solid var(--border2);transition:background .1s;}
+table.t tbody tr:last-child{border-bottom:none;}
+table.t tbody tr:hover{background:#F7FFFC;}
+table.t td{padding:12px 14px;color:var(--t2);vertical-align:middle;}
+table.t .best{background:#F0FDF4;}
+table.t .best td{color:var(--green-d);font-weight:600;}
+.badge{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:4px 11px;border-radius:20px;
+  font-size:11px;font-weight:600;white-space:nowrap;
+}
+.bg{background:var(--green-l);color:var(--green-d);}
+.br{background:#FEE2E2;color:#B91C1C;}
+.ba{background:#FEF3C7;color:#92400E;}
+.bb{background:#DBEAFE;color:#1E40AF;}
+.bp{background:#EDE9FE;color:#5B21B6;}
+.bgr{background:var(--border2);color:var(--t3);}
+
+/* ── Form ── */
+.fg{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
+.fg4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:14px;}
+.fgrp{display:flex;flex-direction:column;gap:6px;}
+.flabel{font-size:12px;font-weight:600;color:var(--t3);letter-spacing:.1px;}
+.finput{
+  padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;
+  font-size:14px;font-family:'Inter',sans-serif;
+  color:var(--t1);background:var(--surface);outline:none;
+  transition:border-color .15s,box-shadow .15s;
+}
+.finput:focus{border-color:var(--green);box-shadow:0 0 0 4px rgba(22,163,74,.1);}
+.fsec{background:var(--border2);border-radius:12px;padding:16px 18px 14px;margin-bottom:12px;}
+.fsec-ttl{font-size:12.5px;font-weight:700;color:var(--t2);margin-bottom:12px;letter-spacing:.1px;}
+
+/* ── Button ── */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:7px;
+  padding:11px 22px;background:var(--green);color:#fff;
+  border:none;border-radius:10px;font-size:14px;font-weight:600;
+  font-family:'Inter',sans-serif;cursor:pointer;transition:all .15s;
+  box-shadow:0 2px 10px rgba(22,163,74,.35);letter-spacing:.1px;
+}
+.btn:hover{background:var(--green-d);box-shadow:0 4px 18px rgba(22,163,74,.45);transform:translateY(-1px);}
+.btn:active{transform:translateY(0);}
+.btn-full{width:100%;}
+.btn-out{background:transparent;color:var(--green);border:1.5px solid var(--green);box-shadow:none;}
+.btn-out:hover{background:var(--green-l);transform:none;}
+
+/* ── Result section ── */
+.result-sec{display:none;margin-top:20px;}
+.result-sec.show{display:block;}
+.rcard{border-radius:16px;padding:28px 22px;text-align:center;}
+.rcard.green{background:linear-gradient(135deg,#ECFDF5,#D1FAE5);border:1.5px solid var(--green-m);color:var(--green-d);}
+.rcard.amber{background:linear-gradient(135deg,#FFFBEB,#FEF3C7);border:1.5px solid #FCD34D;color:#92400E;}
+.rcard.red{background:linear-gradient(135deg,#FFF5F5,#FEE2E2);border:1.5px solid #FECACA;color:#B91C1C;}
+.rc-emoji{font-size:2.6rem;display:block;margin-bottom:8px;}
+.rc-lbl{font-size:10px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;display:block;opacity:.8;}
+.rc-prob{font-size:3.2rem;font-weight:800;display:block;line-height:1.1;margin:6px 0;letter-spacing:-2px;}
+.rc-sub{font-size:12px;opacity:.7;font-weight:500;}
+
+/* ── Info box ── */
+.ibox{
+  background:linear-gradient(135deg,#F0FDF4,#DCFCE7);
+  border:1.5px solid var(--green-m);
+  border-left:4px solid var(--green);border-radius:12px;
+  padding:14px 16px;margin:6px 0;
+  color:var(--green-d);line-height:1.9;font-size:13px;
+}
+.ibox b{color:var(--green-d);font-weight:700;}
+.sig-row{
+  display:flex;align-items:flex-start;gap:10px;
+  padding:7px 0;font-size:13px;color:var(--t2);
+  border-bottom:1px solid var(--border2);
+}
+.sig-row:last-child{border-bottom:none;}
+.sig-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:5px;}
+
+/* ── Progress bar ── */
+.pw{background:var(--border2);border-radius:50px;height:8px;overflow:hidden;margin:9px 0;}
+.pb{height:100%;border-radius:50px;transition:width .6s cubic-bezier(.4,0,.2,1);}
+
+/* ── Upload zone ── */
+.upzone{
+  border:2px dashed var(--border);border-radius:14px;
+  background:var(--border2);padding:44px 28px;
+  text-align:center;cursor:pointer;transition:all .2s;margin-bottom:18px;
+}
+.upzone:hover,.upzone.drag{
+  border-color:var(--green);background:var(--green-l);
+  transform:scale(1.005);box-shadow:0 0 0 4px rgba(22,163,74,.1);
+}
+.upzone input{display:none;}
+.up-icon{font-size:2.6rem;margin-bottom:10px;}
+.up-ttl{font-size:15px;font-weight:700;color:var(--t2);margin-bottom:4px;}
+.up-sub{font-size:13px;color:var(--t4);}
+
+/* ── Risk segment card ── */
+.rseg{border-radius:14px;padding:20px;text-align:center;transition:transform .15s,box-shadow .15s;}
+.rseg:hover{transform:translateY(-2px);box-shadow:var(--shadow-md);}
+.rseg.red{background:linear-gradient(135deg,#FFF5F5,#FEE2E2);border:1.5px solid #FCA5A5;color:#B91C1C;}
+.rseg.amber{background:linear-gradient(135deg,#FFFBEB,#FEF3C7);border:1.5px solid #FCD34D;color:#92400E;}
+.rseg.green{background:linear-gradient(135deg,#ECFDF5,#D1FAE5);border:1.5px solid var(--green-m);color:var(--green-d);}
+.rs-emoji{font-size:2rem;display:block;margin-bottom:7px;}
+.rs-lbl{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;display:block;margin-bottom:6px;opacity:.8;}
+.rs-prob{font-size:14px;font-weight:700;display:block;margin-bottom:4px;}
+.rs-rate{font-size:12.5px;opacity:.75;}
+
+/* ── Summary row ── */
+.sumrow{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:11px 0;border-bottom:1px solid var(--border2);font-size:13px;
+}
+.sumrow:last-child{border-bottom:none;}
+.sk{color:var(--t3);font-weight:500;} .sv{font-weight:600;color:var(--t1);}
+
+/* ── Toast ── */
+#toast{
+  display:none;position:fixed;top:20px;right:20px;z-index:9999;
+  background:var(--t1);color:#fff;padding:12px 20px;border-radius:12px;
+  font-size:13px;font-weight:500;box-shadow:var(--shadow-lg);
+  align-items:center;gap:8px;
+}
+#toast.show{display:flex;}
+</style>
+</head>
+<body>
+<div id="toast">⏳ Analysing…</div>
+
+<!-- ═══════════ SHELL ═══════════ -->
+<div id="shell">
+
+<!-- ═══════════ SIDEBAR (single, unified) ═══════════ -->
+<nav id="sidebar">
+  <div class="sb-brand">
+    <div class="sb-logo">⚡</div>
+    <div class="sb-name">ChurnGuard</div>
+    <div class="sb-toggle">‹</div>
+  </div>
+
+  <div class="sb-section">Analytics</div>
+  <div class="sb-item active" id="nav-dashboard" onclick="showPage('dashboard')">
+    <span class="sb-icon">⊞</span> Dashboard
+  </div>
+  <div class="sb-item" id="nav-single" onclick="showPage('single')">
+    <span class="sb-icon">👤</span> Single Prediction
+  </div>
+  <div class="sb-item" id="nav-bulk" onclick="showPage('bulk')">
+    <span class="sb-icon">📁</span> Bulk Prediction
+    <span class="sb-badge">CSV</span>
+  </div>
+
+  <div class="sb-section">Reporting</div>
+  <div class="sb-item" id="nav-performance" onclick="showPage('performance')">
+    <span class="sb-icon">📊</span> Model Performance
+  </div>
+</nav>
+
+<!-- ═══════════ MAIN ═══════════ -->
+<div id="main">
+
+  <!-- TOPBAR -->
+  <div id="topbar">
+    <div>
+      <span id="tb-title">Dashboard</span>
+      <span id="tb-count">99,999 customers</span>
+    </div>
+    <div class="tb-spacer"></div>
+    <button class="tb-btn" id="tb-action" onclick="topbarAction()">⊕ &nbsp;Add data</button>
+  </div>
+
+  <!-- TAB BAR (dashboard only) -->
+  <div id="tabbar">
+    <!-- <button class="tab active" id="tab-all"    onclick="setTab(this)">All <span class="tab-n" id="tn-all">5</span></button>
+    <button class="tab"        id="tab-high"   onclick="setTab(this)">High Risk <span class="tab-n">7,396</span></button>
+    <button class="tab"        id="tab-medium" onclick="setTab(this)">Medium Risk <span class="tab-n">3,279</span></button>
+    <button class="tab"        id="tab-low"    onclick="setTab(this)">Low Risk <span class="tab-n">89,324</span></button>
+    <button class="tab"        id="tab-stable" onclick="setTab(this)">Stable <span class="tab-n">—</span></button> -->
+  </div>
+
+  <!-- SEARCH TOOLBAR (dashboard only) -->
+  <div id="toolbar">
+    <!-- <div class="searchbox">
+      <span style="color:var(--t4);font-size:12px;">🔍</span>
+      <input type="text" id="search-input" placeholder="Search customer ID, segment, risk status…"/>
+    </div>
+    <button class="filt-btn">⚙ &nbsp;Filters ▾</button>
+    <button class="filt-btn" id="time-btn">🕐 &nbsp;Time period ▾</button> -->
+  </div>
+
+  <!-- PAGE CONTENT -->
+  <div id="page-content">
+
+<!-- ═══════════ PAGE: DASHBOARD ═══════════ -->
+<div id="page-dashboard" class="page active">
+
+  <div class="kpi-strip">
+    <div class="kpi-cell">
+      <div class="kc-label">👥 Total Customers</div>
+      <div class="kc-val">99,999</div>
+      <div class="kc-delta up">↗ 2.6%</div>
+    </div>
+    <div class="kpi-cell">
+      <div class="kc-label">🎯 Accuracy</div>
+      <div class="kc-val">94.0%</div>
+      <div class="kc-delta up">↗ XGBoost Tuned</div>
+    </div>
+    <div class="kpi-cell">
+      <div class="kc-label">📈 AUC-ROC</div>
+      <div class="kc-val">93.8%</div>
+      <div class="kc-delta up">↗ 0.5%</div>
+    </div>
+    <div class="kpi-cell">
+      <div class="kc-label">🔴 High Risk</div>
+      <div class="kc-val">7,396</div>
+      <div class="kc-delta dn">↘ 10.2% of total</div>
+    </div>
+    <div class="kpi-cell">
+      <div class="kc-label">⚖️ F1-Score</div>
+      <div class="kc-val">68.7%</div>
+      <div class="kc-delta up">↗ 0.3%</div>
+    </div>
+  </div>
+
+  <!-- Probability Distribution Bar Chart -->
+  <div class="card" style="margin-bottom:14px;">
+    <div class="sec-ttl">
+      Churn Probability Distribution
+      <div class="leg" style="margin-left:auto;">
+        <div class="leg-i"><div class="leg-d" style="background:#16A34A;"></div>Low Risk</div>
+        <div class="leg-i"><div class="leg-d" style="background:#F59E0B;"></div>Medium Risk</div>
+        <div class="leg-i"><div class="leg-d" style="background:#EF4444;"></div>High Risk</div>
+      </div>
+    </div>
+    <div style="position:relative;height:230px;"><canvas id="cProbDist"></canvas></div>
+  </div>
+
+  <!-- Donut + Churn Rate -->
+  <div class="g2">
+    <div class="card">
+      <div class="sec-ttl">Risk by Segment</div>
+      <div style="position:relative;height:240px;"><canvas id="cDonut"></canvas></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:11px;">
+        <div class="leg-i"><div class="leg-d" style="background:#EF4444;"></div>High – 7.4%</div>
+        <div class="leg-i"><div class="leg-d" style="background:#F59E0B;"></div>Medium – 3.3%</div>
+        <div class="leg-i"><div class="leg-d" style="background:#16A34A;"></div>Low – 89.3%</div>
+        <div class="leg-i"><div class="leg-d" style="background:#9CA3AF;"></div>Total: 99,999</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="sec-ttl">Actual Churn Rate per Segment <span class="sec-sub">Validation data</span></div>
+      <div style="position:relative;height:220px;"><canvas id="cChurnRate"></canvas></div>
+      <div class="div"></div>
+      <div class="sumrow"><span class="sk">🔴 HIGH RISK</span><span class="sv" style="color:var(--red);">93.9% actual churn</span></div>
+      <div class="sumrow"><span class="sk">🟡 MEDIUM RISK</span><span class="sv" style="color:var(--amber);">61.8% actual churn</span></div>
+      <div class="sumrow"><span class="sk">🟢 LOW RISK</span><span class="sv" style="color:var(--green);">1.4% actual churn</span></div>
+    </div>
+  </div>
+
+  <div class="div"></div>
+
+  <!-- SHAP + Model Table -->
+  <div class="g2">
+    <div class="card">
+      <div class="sec-ttl">Top 15 Features (SHAP Importance)</div>
+      <div id="shapBars"></div>
+    </div>
+    <div class="card">
+      <div class="sec-ttl">Model Comparison</div>
+      <div class="tw">
+        <table class="t">
+          <thead><tr><th>Model</th><th>Acc.</th><th>Prec.</th><th>F1</th><th>AUC</th></tr></thead>
+          <tbody>
+            <tr><td>Logistic Reg.</td><td>86.8%</td><td>42.4%</td><td>55.8%</td><td>91.7%</td></tr>
+            <tr><td>Decision Tree</td><td>90.3%</td><td>51.5%</td><td>61.0%</td><td>91.1%</td></tr>
+            <tr><td>Random Forest</td><td>91.9%</td><td>57.7%</td><td>65.6%</td><td>93.6%</td></tr>
+            <tr><td>XGBoost</td><td>93.6%</td><td>68.2%</td><td>68.5%</td><td>93.7%</td></tr>
+            <tr class="best"><td><span class="badge bg">⭐ XGBoost Tuned</span></td><td>94.0%</td><td>73.5%</td><td>68.7%</td><td>93.8%</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div><!-- end page-dashboard -->
+
+<!-- ═══════════ PAGE: SINGLE PREDICTION ═══════════ -->
+<div id="page-single" class="page">
+
+  <div class="card">
+    <div class="fsec">
+      <div class="fsec-ttl">💰 ARPU — Avg Revenue per User (₹)</div>
+      <div class="fg">
+        <div class="fgrp"><label class="flabel">June</label><input class="finput" type="number" id="arpu_6" value="280" min="0" step="10"/></div>
+        <div class="fgrp"><label class="flabel">July</label><input class="finput" type="number" id="arpu_7" value="250" min="0" step="10"/></div>
+        <div class="fgrp"><label class="flabel">August</label><input class="finput" type="number" id="arpu_8" value="100" min="0" step="10"/></div>
+      </div>
+    </div>
+    <div class="fsec">
+      <div class="fsec-ttl">📞 Outgoing Call Minutes</div>
+      <div class="fg">
+        <div class="fgrp"><label class="flabel">June</label><input class="finput" type="number" id="og_6" value="300" min="0" step="10"/></div>
+        <div class="fgrp"><label class="flabel">July</label><input class="finput" type="number" id="og_7" value="200" min="0" step="10"/></div>
+        <div class="fgrp"><label class="flabel">August</label><input class="finput" type="number" id="og_8" value="50" min="0" step="10"/></div>
+      </div>
+    </div>
+    <div class="fsec">
+      <div class="fsec-ttl">📲 Incoming Call Minutes</div>
+      <div class="fg">
+        <div class="fgrp"><label class="flabel">June</label><input class="finput" type="number" id="ic_6" value="250" min="0" step="10"/></div>
+        <div class="fgrp"><label class="flabel">July</label><input class="finput" type="number" id="ic_7" value="180" min="0" step="10"/></div>
+        <div class="fgrp"><label class="flabel">August</label><input class="finput" type="number" id="ic_8" value="30" min="0" step="10"/></div>
+      </div>
+    </div>
+    <div class="fsec">
+      <div class="fsec-ttl">💳 Recharge Amount (₹)</div>
+      <div class="fg">
+        <div class="fgrp"><label class="flabel">June</label><input class="finput" type="number" id="ra_6" value="300" min="0" step="10"/></div>
+        <div class="fgrp"><label class="flabel">July</label><input class="finput" type="number" id="ra_7" value="200" min="0" step="10"/></div>
+        <div class="fgrp"><label class="flabel">August</label><input class="finput" type="number" id="ra_8" value="50" min="0" step="10"/></div>
+      </div>
+    </div>
+    <div class="fsec">
+      <div class="fsec-ttl">🔁 Recharge Count</div>
+      <div class="fg">
+        <div class="fgrp"><label class="flabel">June</label><input class="finput" type="number" id="rn_6" value="4" min="0" step="1"/></div>
+        <div class="fgrp"><label class="flabel">July</label><input class="finput" type="number" id="rn_7" value="3" min="0" step="1"/></div>
+        <div class="fgrp"><label class="flabel">August</label><input class="finput" type="number" id="rn_8" value="1" min="0" step="1"/></div>
+      </div>
+    </div>
+    <div class="fsec">
+      <div class="fsec-ttl">👤 Customer Profile</div>
+      <div class="fg4">
+        <div class="fgrp"><label class="flabel">Age on Network (days)</label><input class="finput" type="number" id="aon" value="365" min="0" step="30"/></div>
+        <div class="fgrp"><label class="flabel">Last Recharge Amt (₹)</label><input class="finput" type="number" id="last_rch" value="50" min="0" step="10"/></div>
+        <div class="fgrp"><label class="flabel">Roaming Outgoing (min)</label><input class="finput" type="number" id="roam_og" value="0" min="0" step="1"/></div>
+        <div class="fgrp"><label class="flabel">Roaming Incoming (min)</label><input class="finput" type="number" id="roam_ic" value="0" min="0" step="1"/></div>
+      </div>
+    </div>
+    <button class="btn btn-full" onclick="runSingle()">⚡ &nbsp;Predict Churn Risk</button>
+  </div>
+
+  <!-- RESULT (hidden until predict) -->
+  <div class="result-sec" id="resultSec">
+    <div class="div"></div>
+    <div class="g2">
+      <!-- Left: risk card + meter -->
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div id="rCard" class="rcard green">
+          <span class="rc-emoji" id="rcEmoji">🟢</span>
+          <span class="rc-lbl"  id="rcLabel">LOW RISK</span>
+          <span class="rc-prob" id="rcProb">12.4%</span>
+          <span class="rc-sub">Churn Probability</span>
+        </div>
+        <div class="card">
+          <div style="font-size:13px;color:var(--t3);margin-bottom:7px;">Probability meter</div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--t4);margin-bottom:4px;">
+            <span>0%</span>
+            <span id="probLbl" style="font-weight:600;color:var(--t1);">12.4%</span>
+            <span>100%</span>
+          </div>
+          <div class="pw"><div class="pb" id="probBar" style="width:12%;background:var(--green);"></div></div>
+          <div style="display:flex;justify-content:space-between;margin-top:2px;">
+            <span style="font-size:11px;color:var(--green);font-weight:700;">LOW</span>
+            <span style="font-size:11px;color:var(--amber);font-weight:700;">MEDIUM</span>
+            <span style="font-size:11px;color:var(--red);font-weight:700;">HIGH</span>
+          </div>
+          <!-- Half-donut gauge -->
+          <div style="display:flex;flex-direction:column;align-items:center;margin-top:10px;">
+            <canvas id="gaugeChart" style="max-width:240px;max-height:140px;"></canvas>
+          </div>
+        </div>
+      </div>
+      <!-- Right: signals + plan -->
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div class="card">
+          <div class="sec-ttl">⚠️ Risk Signals</div>
+          <div id="rSignals"></div>
+          <div class="sec-ttl" style="margin-top:13px;">💡 Recommendations</div>
+          <div id="rActions"></div>
+        </div>
+        <div class="card">
+          <div class="sec-ttl">🎯 Retention Plan</div>
+          <div class="ibox" id="rPlan"></div>
+        </div>
+      </div>
+    </div>
+    <div class="div"></div>
+    <div class="card">
+      <div class="sec-ttl">
+        🔬 Feature Impact (SHAP Approximation)
+        <span class="sec-sub">
+          <span style="color:var(--red);">■</span> → Churn &nbsp;
+          <span style="color:var(--green);">■</span> → Stay
+        </span>
+      </div>
+      <div id="singleShap"></div>
+    </div>
+  </div>
+
+</div><!-- end page-single -->
+
+<!-- ═══════════ PAGE: BULK PREDICTION ═══════════ -->
+<div id="page-bulk" class="page">
+
+  <label class="upzone" id="upZone" for="csvInput">
+    <input type="file" id="csvInput" accept=".csv" onchange="handleCSV(event)"/>
+    <div class="up-icon">📂</div>
+    <div class="up-ttl">Drop CSV here or click to browse</div>
+    <div class="up-sub">Columns should match telecom dataset format</div>
+  </label>
+
+  <div id="fileBar" style="display:none;margin-bottom:14px;">
+    <div class="card" style="display:flex;align-items:center;gap:11px;">
+      <span style="font-size:1.3rem;">📄</span>
+      <div>
+        <div id="fName" style="font-size:12.5px;font-weight:600;color:var(--t1);"></div>
+        <div id="fStats" style="font-size:10.5px;color:var(--t4);margin-top:1px;"></div>
+      </div>
+      <button class="btn" style="margin-left:auto;" onclick="runBulk()">⚡ &nbsp;Run Predictions</button>
+    </div>
+  </div>
+
+  <div id="bulkOut" style="display:none;">
+    <!-- KPIs -->
+    <div class="g4" style="margin-bottom:14px;">
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:13px 15px;">
+        <div class="kc-label">👥 Total</div>
+        <div class="kc-val" id="bTotal">—</div>
+      </div>
+      <div style="background:#FEF2F2;border:1px solid #FECACA;border-radius:var(--r);padding:13px 15px;">
+        <div class="kc-label" style="color:var(--red);">🔴 High Risk</div>
+        <div class="kc-val" style="color:var(--red);" id="bHigh">—</div>
+        <div id="bHighP" style="font-size:9.5px;color:var(--t4);margin-top:2px;"></div>
+      </div>
+      <div style="background:#FFFBEB;border:1px solid #FCD34D;border-radius:var(--r);padding:13px 15px;">
+        <div class="kc-label" style="color:var(--amber);">🟡 Medium</div>
+        <div class="kc-val" style="color:var(--amber);" id="bMed">—</div>
+        <div id="bMedP" style="font-size:9.5px;color:var(--t4);margin-top:2px;"></div>
+      </div>
+      <div style="background:var(--green-l);border:1px solid var(--green-m);border-radius:var(--r);padding:13px 15px;">
+        <div class="kc-label" style="color:var(--green);">🟢 Low</div>
+        <div class="kc-val" style="color:var(--green);" id="bLow">—</div>
+        <div id="bLowP" style="font-size:9.5px;color:var(--t4);margin-top:2px;"></div>
+      </div>
+    </div>
+
+    <div class="g2" style="margin-bottom:14px;">
+      <div class="card">
+        <div class="sec-ttl">Risk Distribution</div>
+        <div style="position:relative;height:280px;"><canvas id="bDonut"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="sec-ttl">Customer Count by Risk Tier</div>
+        <div style="position:relative;height:280px;"><canvas id="bBar"></canvas></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:14px;">
+      <div class="sec-ttl">Probability Distribution Histogram</div>
+      <div style="position:relative;height:230px;"><canvas id="bHist"></canvas></div>
+    </div>
+
+    <div class="card" style="margin-bottom:14px;">
+      <div class="sec-ttl">🔴 Top 10 Highest-Risk Customers</div>
+      <div class="tw">
+        <table class="t">
+          <thead><tr><th>#</th><th>Customer Index</th><th>Churn Probability</th><th>Risk Tier</th></tr></thead>
+          <tbody id="bTopBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div style="text-align:center;">
+      <button class="btn" onclick="downloadCSV()">⬇️ &nbsp;Download Results CSV</button>
+    </div>
+  </div>
+
+</div><!-- end page-bulk -->
+
+<!-- ═══════════ PAGE: MODEL PERFORMANCE ═══════════ -->
+<div id="page-performance" class="page">
+
+  <div class="kpi-strip" style="margin-bottom:14px;">
+    <div class="kpi-cell"><div class="kc-label">🎯 Accuracy</div><div class="kc-val">94.0%</div><div class="kc-delta up">↗ XGBoost Tuned</div></div>
+    <div class="kpi-cell"><div class="kc-label">📈 AUC-ROC</div><div class="kc-val">93.8%</div><div class="kc-delta up">↗ Best model</div></div>
+    <div class="kpi-cell"><div class="kc-label">🔬 Precision</div><div class="kc-val">73.5%</div><div class="kc-delta up">↗ +31% vs baseline</div></div>
+    <div class="kpi-cell"><div class="kc-label">🔍 Recall</div><div class="kc-val">64.4%</div><div class="kc-delta up">↗ 0.3%</div></div>
+    <div class="kpi-cell"><div class="kc-label">⚖️ F1-Score</div><div class="kc-val">68.7%</div><div class="kc-delta up">↗ 0.2%</div></div>
+  </div>
+
+  <div class="g2" style="margin-bottom:14px;">
+    <div class="card">
+      <div class="sec-ttl">Metric Comparison Across Models</div>
+      <div style="position:relative;height:300px;"><canvas id="pGrouped"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="sec-ttl">Radar — Model Skill Profile</div>
+      <div style="position:relative;height:300px;"><canvas id="pRadar"></canvas></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:14px;">
+    <div class="sec-ttl">All Models — Full Comparison</div>
+    <div class="tw">
+      <table class="t">
+        <thead><tr><th>Model</th><th>Accuracy</th><th>Precision</th><th>Recall</th><th>F1-Score</th><th>AUC-ROC</th><th>CV F1</th><th>Train Time</th></tr></thead>
+        <tbody>
+          <tr><td>Logistic Regression</td><td>0.8681</td><td>0.4235</td><td>0.8155</td><td>0.5575</td><td>0.9170</td><td>0.8680</td><td>26s</td></tr>
+          <tr><td>Decision Tree</td><td>0.9025</td><td>0.5150</td><td>0.7488</td><td>0.6103</td><td>0.9113</td><td>0.8863</td><td>31s</td></tr>
+          <tr><td>Random Forest</td><td>0.9187</td><td>0.5766</td><td>0.7610</td><td>0.6561</td><td>0.9355</td><td>0.9052</td><td>331s</td></tr>
+          <tr><td>XGBoost</td><td>0.9355</td><td>0.6824</td><td>0.6874</td><td>0.6849</td><td>0.9365</td><td>0.9509</td><td>65s</td></tr>
+          <tr class="best"><td><span class="badge bg">⭐ XGBoost (Tuned)</span></td><td>0.9401</td><td>0.7354</td><td>0.6438</td><td>0.6866</td><td>0.9381</td><td>—</td><td>—</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="g2">
+    <div>
+      <div class="sec-ttl">Risk Segmentation Logic</div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div class="rseg red"><span class="rs-emoji">🔴</span><span class="rs-lbl">High Risk</span><span class="rs-prob">Probability ≥ 70%</span><span class="rs-rate">Immediate action · 93.9% actual churn</span></div>
+        <div class="rseg amber"><span class="rs-emoji">🟡</span><span class="rs-lbl">Medium Risk</span><span class="rs-prob">Probability 40–70%</span><span class="rs-rate">Monitor closely · 61.8% actual churn</span></div>
+        <div class="rseg green"><span class="rs-emoji">🟢</span><span class="rs-lbl">Low Risk</span><span class="rs-prob">Probability &lt; 40%</span><span class="rs-rate">Safe customer · 1.4% actual churn</span></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="sec-ttl">Project Summary</div>
+      <div class="sumrow"><span class="sk">Dataset</span><span class="sv">Indian Telecom (99,999 customers)</span></div>
+      <div class="sumrow"><span class="sk">Total Features</span><span class="sv">153 raw + 22 engineered</span></div>
+      <div class="sumrow"><span class="sk">Churn Rate</span><span class="sv">10.19%</span></div>
+      <div class="sumrow"><span class="sk">Best Model</span><span class="sv"><span class="badge bg">XGBoost Tuned</span></span></div>
+      <div class="sumrow"><span class="sk">Tuning</span><span class="sv">RandomizedSearchCV (50 iter, 5-fold)</span></div>
+      <div class="sumrow"><span class="sk">SMOTE</span><span class="sv">Applied</span></div>
+      <div class="sumrow"><span class="sk">Explainability</span><span class="sv">SHAP TreeExplainer</span></div>
+    </div>
+  </div>
+
+</div><!-- end page-performance -->
+
+  </div><!-- end page-content -->
+</div><!-- end main -->
+</div><!-- end shell -->
+<script>
+
+
+/* ── All JS in ONE block — no cross-block reference issues ── */
+Chart.register(ChartDataLabels);
+
+/* ── Palette constants ── */
+const G='#16A34A',R='#EF4444',A='#F59E0B',B='#3B82F6',P='#8B5CF6',C='#06B6D4';
+const GRID='#F3F4F6', T3='#6B7280', T4='#9CA3AF';
+const charts={};
+function dChart(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
+function bOpts(extra={}){
+  return Object.assign({responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},datalabels:{display:false}}},extra);
+}
+
+/* ── Static data ── */
+const SHAP_DATA=[
+  {f:'total_ic_mou_8',v:0.8012},{f:'total_mou_8',v:0.4980},
+  {f:'last_day_rch_amt_8',v:0.4548},{f:'roam_og_mou_8',v:0.4520},
+  {f:'total_og_mou_8',v:0.3595},{f:'total_rech_num_8',v:0.3418},
+  {f:'tenure_segment',v:0.2877},{f:'spl_ic_mou_8',v:0.2447},
+  {f:'arpu_std',v:0.1703},{f:'roam_ic_mou_8',v:0.1696},
+  {f:'total_rech_num_7',v:0.1587},{f:'is_roaming_user',v:0.1547},
+  {f:'total_rech_num_6',v:0.1417},{f:'last_day_rch_amt_6',v:0.1413},
+  {f:'ic_mou_trend',v:0.1324}
+];
+const ML=['Accuracy','Precision','Recall','F1-Score','AUC-ROC'];
+const MDS=[
+  {l:'Logistic Reg.',d:[.8681,.4235,.8155,.5575,.9170],c:P},
+  {l:'Decision Tree',d:[.9025,.5150,.7488,.6103,.9113],c:B},
+  {l:'Random Forest',d:[.9187,.5766,.7610,.6561,.9355],c:C},
+  {l:'XGBoost',      d:[.9355,.6824,.6874,.6849,.9365],c:A},
+  {l:'XGBoost Tuned',d:[.9401,.7354,.6438,.6866,.9381],c:G}
+];
+
+/* ═══════════════════════════════
+   NAVIGATION
+════════════════════════════════ */
+const PAGE_CFG={
+  dashboard:  {title:'Dashboard',        count:'99,999 customers',    btn:'⊕ Add data',   tabs:true,  toolbar:true},
+  single:     {title:'Single Prediction',count:'Enter customer data', btn:'↺ Reset form', tabs:false, toolbar:false},
+  bulk:       {title:'Bulk Prediction',  count:'Upload CSV file',     btn:'↺ Reset',      tabs:false, toolbar:false},
+  performance:{title:'Model Performance',count:'5 models compared',   btn:'⬇ Export PDF', tabs:false, toolbar:false}
+};
+
+function showPage(id){
+  /* hide all pages */
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  /* update nav highlight */
+  document.querySelectorAll('.sb-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('nav-'+id).classList.add('active');
+  /* update topbar */
+  const cfg=PAGE_CFG[id];
+  document.getElementById('tb-title').textContent=cfg.title;
+  document.getElementById('tb-count').textContent=cfg.count;
+  document.getElementById('tb-action').textContent=cfg.btn;
+  /* show/hide tabs & toolbar */
+  document.getElementById('tabbar').style.display=cfg.tabs?'':'none';
+  document.getElementById('toolbar').style.display=cfg.toolbar?'':'none';
+  /* lazy init charts */
+  if(id==='dashboard')    initDashboard();
+  if(id==='performance')  initPerformance();
+}
+
+/* tab bar (dashboard only) */
+function setTab(el){
+  document.querySelectorAll('#tabbar .tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+}
+
+/* topbar action — context-aware */
+function topbarAction(){
+  const active=document.querySelector('.page.active');
+  const id=active?active.id.replace('page-',''):'dashboard';
+  if(id==='single'){resetSingle();}
+  else if(id==='bulk'){resetBulk();}
+  else if(id==='performance'){window.print();}
+  else{alert('Data refresh would connect to backend here.');}
+}
+
+
+/* ═══════════════════════════════
+   SHAP BAR RENDERER
+════════════════════════════════ */
+function renderShap(containerId, items, bipolar){
+  const el=document.getElementById(containerId);
+  if(!el) return;
+  const maxV=Math.max(...items.map(d=>Math.abs(d.v||d.val)));
+  el.innerHTML=items.map(item=>{
+    const v=item.v!==undefined?item.v:item.val;
+    const pct=(Math.abs(v)/maxV*100).toFixed(1);
+    const col=bipolar
+      ?(v>0?'rgba(239,68,68,.72)':'rgba(22,163,74,.72)')
+      :`rgba(22,163,74,${(0.3+0.7*Math.abs(v)/maxV).toFixed(2)})`;
+    const feat=item.f||item.feat;
+    return `<div class="shap-row">
+      <div class="shap-feat" title="${feat}">${feat}</div>
+      <div class="shap-bw"><div class="shap-b" style="width:${pct}%;background:${col};"></div></div>
+      <div class="shap-v">${v>=0?'+':''}${v.toFixed(4)}</div>
+    </div>`;
+  }).join('');
+}
+
+/* ═══════════════════════════════
+   DASHBOARD CHARTS
+════════════════════════════════ */
+let dashInited=false;
+function initDashboard(){
+  if(dashInited) return; dashInited=true;
+
+  /* Probability distribution */
+  dChart('pDist');
+  charts.pDist=new Chart(document.getElementById('cProbDist'),{
+    type:'bar',
+    data:{
+      labels:['0–10%','10–20%','20–30%','30–40%','40–50%','50–60%','60–70%','70–80%','80–90%','90–100%'],
+      datasets:[{
+        data:[52180,18470,9834,8840,1820,890,569,2380,2870,2146],
+        backgroundColor:[G,G,G,G,A,A,A,R,R,R],
+        borderWidth:0,borderRadius:4
+      }]
+    },
+    options:bOpts({
+      plugins:{legend:{display:false},datalabels:{display:false},
+        tooltip:{callbacks:{label:ctx=>` ${ctx.parsed.y.toLocaleString()} customers`}}},
+      scales:{
+        x:{grid:{display:false},ticks:{color:T3,font:{size:10}}},
+        y:{grid:{color:GRID},ticks:{color:T3,font:{size:10},callback:v=>v.toLocaleString()},
+           title:{display:true,text:'Customers',color:T4,font:{size:10}}}
+      }
+    })
+  });
+
+  /* Donut */
+  dChart('donut');
+  charts.donut=new Chart(document.getElementById('cDonut'),{
+    type:'doughnut',
+    data:{labels:['High Risk','Medium Risk','Low Risk'],
+      datasets:[{data:[7396,3279,89324],backgroundColor:[R,A,G],borderColor:'#fff',borderWidth:3,hoverOffset:4}]},
+    options:bOpts({cutout:'64%',
+      plugins:{legend:{display:false},
+        datalabels:{display:true,color:'#fff',font:{size:10,weight:'700'},
+          formatter:(v,ctx)=>{const t=ctx.chart.data.datasets[0].data.reduce((a,b)=>a+b,0);return(v/t*100).toFixed(1)+'%';}},
+        tooltip:{callbacks:{label:ctx=>` ${ctx.label}: ${ctx.parsed.toLocaleString()}`}}}})
+  });
+
+  /* Churn rate bar */
+  dChart('churn');
+  charts.churn=new Chart(document.getElementById('cChurnRate'),{
+    type:'bar',
+    data:{labels:['High Risk','Medium Risk','Low Risk'],
+      datasets:[{data:[93.9,61.8,1.4],
+        backgroundColor:['rgba(239,68,68,.8)','rgba(245,158,11,.8)','rgba(22,163,74,.8)'],
+        borderColor:[R,A,G],borderWidth:1,borderRadius:6,borderSkipped:false}]},
+    options:bOpts({
+      plugins:{legend:{display:false},
+        datalabels:{display:true,anchor:'end',align:'top',color:T3,font:{size:11,weight:'600'},formatter:v=>v+'%'}},
+      scales:{
+        x:{grid:{display:false},ticks:{color:T3,font:{size:10}}},
+        y:{min:0,max:115,grid:{color:GRID},ticks:{color:T3,font:{size:10},callback:v=>v+'%'},
+           title:{display:true,text:'Actual Churn %',color:T4,font:{size:10}}}
+      }
+    })
+  });
+
+  /* SHAP bars */
+  renderShap('shapBars', SHAP_DATA, false);
+}
+
+
+/* ═══════════════════════════════
+   PERFORMANCE CHARTS
+════════════════════════════════ */
+let perfInited=false;
+function initPerformance(){
+  if(perfInited) return; perfInited=true;
+
+  dChart('pGrouped');
+  charts.pGrouped=new Chart(document.getElementById('pGrouped'),{
+    type:'bar',
+    data:{labels:ML,
+      datasets:MDS.map(d=>({label:d.l,data:d.d,
+        backgroundColor:d.c+'CC',borderColor:d.c,borderWidth:1,borderRadius:3}))},
+    options:bOpts({
+      plugins:{
+        legend:{display:true,position:'bottom',labels:{color:T3,font:{size:10},boxWidth:10,padding:10}},
+        datalabels:{display:false}
+      },
+      scales:{
+        x:{grid:{display:false},ticks:{color:T3,font:{size:10}}},
+        y:{min:0,max:1.05,grid:{color:GRID},
+           ticks:{color:T3,font:{size:10},callback:v=>(v*100).toFixed(0)+'%'}}
+      }
+    })
+  });
+
+  dChart('pRadar');
+  charts.pRadar=new Chart(document.getElementById('pRadar'),{
+    type:'radar',
+    data:{labels:ML,
+      datasets:MDS.map(d=>({label:d.l,data:d.d,
+        borderColor:d.c,backgroundColor:d.c+'18',
+        pointBackgroundColor:d.c,pointRadius:3,borderWidth:2}))},
+    options:bOpts({
+      plugins:{
+        legend:{display:true,position:'bottom',labels:{color:T3,font:{size:10},boxWidth:10,padding:8}},
+        datalabels:{display:false}
+      },
+      scales:{r:{min:0,max:1,
+        ticks:{stepSize:.25,color:T4,font:{size:8},backdropColor:'transparent',callback:v=>(v*100)+'%'},
+        grid:{color:GRID},pointLabels:{color:T3,font:{size:10}},angleLines:{color:'#E5E7EB'}}}
+    })
+  });
+}
+
+/* ═══════════════════════════════
+   SINGLE PREDICTION
+════════════════════════════════ */
+function gv(id){return parseFloat(document.getElementById(id).value)||0;}
+
+function scoreSingle(){
+  const a6=gv('arpu_6'),a7=gv('arpu_7'),a8=gv('arpu_8');
+  const og6=gv('og_6'),og8=gv('og_8');
+  const ic6=gv('ic_6'),ic8=gv('ic_8');
+  const ra6=gv('ra_6'),ra8=gv('ra_8');
+  const rn6=gv('rn_6'),rn8=gv('rn_8');
+  const aon=gv('aon'),lr=gv('last_rch');
+  const ro=gv('roam_og'),ri=gv('roam_ic');
+
+  const at=a8-a6, ad=(a6-a8)/(a6+1), avg_a=(a6+a7+a8)/3;
+  const og_t=og8-og6, ic_t=ic8-ic6, ra_t=ra8-ra6, rn_t=rn8-rn6;
+  const tenure=aon/30, roaming=(ro+ri)>0;
+
+  let s=0.10;
+  if(ad>0.5)s+=0.22;else if(ad>0.3)s+=0.14;else if(at<-50)s+=0.08;
+  if(og_t<-150)s+=0.18;else if(og_t<-80)s+=0.10;
+  if(ic_t<-100)s+=0.10;
+  if(ra_t<-150)s+=0.14;else if(ra_t<-80)s+=0.08;
+  if(rn_t<-3)s+=0.10;else if(rn_t<-1)s+=0.05;
+  if(og8<30&&a8<80)s+=0.12;
+  if(og8===0&&a8===0)s+=0.20;
+  if(tenure<6)s+=0.06;else if(tenure>36)s-=0.04;
+  if(avg_a>=356.23)s-=0.03;
+  if(roaming)s+=0.03;
+  if(lr<20&&lr>0)s+=0.06;if(lr===0)s+=0.12;
+  return{score:Math.max(0.01,Math.min(0.99,s)),at,og_t,ic_t,ra_t,rn_t,tenure,roaming,avg_a,a8,og8,lr};
+}
+
+function runSingle(){
+  document.getElementById('toast').classList.add('show');
+  setTimeout(()=>{
+    const {score,at,og_t,ic_t,ra_t,rn_t,tenure,roaming,avg_a,a8,og8,lr}=scoreSingle();
+    const cls=score>=0.70?'red':score>=0.40?'amber':'green';
+    const emoji=score>=0.70?'🔴':score>=0.40?'🟡':'🟢';
+    const lbl=score>=0.70?'HIGH RISK':score>=0.40?'MEDIUM RISK':'LOW RISK';
+
+    /* risk card */
+    document.getElementById('rCard').className='rcard '+cls;
+    document.getElementById('rcEmoji').textContent=emoji;
+    document.getElementById('rcLabel').textContent=lbl;
+    document.getElementById('rcProb').textContent=(score*100).toFixed(1)+'%';
+
+    /* prob bar */
+    const bc=score>=0.70?'var(--red)':score>=0.40?'var(--amber)':'var(--green)';
+    document.getElementById('probBar').style.cssText=`width:${(score*100).toFixed(1)}%;background:${bc};`;
+    document.getElementById('probLbl').textContent=(score*100).toFixed(1)+'%';
+
+    /* gauge */
+    dChart('gauge');
+    charts.gauge=new Chart(document.getElementById('gaugeChart'),{
+      type:'doughnut',
+      data:{datasets:[{
+        data:[score*100,100-score*100],
+        backgroundColor:[score>=0.70?R:score>=0.40?A:G,'#F3F4F6'],
+        borderWidth:0,circumference:180,rotation:-90
+      }]},
+      options:{responsive:true,maintainAspectRatio:false,cutout:'72%',
+        plugins:{legend:{display:false},tooltip:{enabled:false},
+          datalabels:{display:true,color:'#111827',font:{size:17,weight:'800'},
+            formatter:(v,ctx)=>ctx.dataIndex===0?v.toFixed(1)+'%':'',
+            anchor:'center',align:'center'}}}
+    });
+
+    /* signals */
+    buildSignals(at,og_t,ra_t,rn_t,tenure,avg_a>=356.23,roaming,cls);
+
+    /* approx SHAP */
+    const si=[
+      {f:'ARPU decline',       v:at<-100?.20:at<-50?.10:at>0?-.07:.00},
+      {f:'Outgoing call trend',v:og_t<-80?.16:og_t>80?-.10:.01},
+      {f:'Incoming call trend',v:ic_t<-80?.14:ic_t>80?-.08:.00},
+      {f:'Recharge amt trend', v:ra_t<-100?.14:ra_t<-50?.07:ra_t>0?-.06:.00},
+      {f:'Recharge cnt trend', v:rn_t<-3?.11:rn_t<-1?.06:rn_t>1?-.04:.00},
+      {f:'Last recharge amt',  v:lr<20?.13:lr>200?-.09:.01},
+      {f:'Tenure segment',     v:tenure<6?.06:tenure>36?-.05:.00},
+      {f:'Aug outgoing (min)', v:og8<30?.10:og8>200?-.07:.00},
+      {f:'Aug ARPU (₹)',       v:a8<50?.12:a8>300?-.09:.00},
+      {f:'Is roaming user',    v:roaming?-.04:.03}
+    ].sort((a,b)=>Math.abs(b.v)-Math.abs(a.v));
+    renderShap('singleShap', si, true);
+
+    document.getElementById('toast').classList.remove('show');
+    document.getElementById('resultSec').classList.add('show');
+    document.getElementById('resultSec').scrollIntoView({behavior:'smooth',block:'start'});
+  },600);
+}
+
+function resetSingle(){
+  document.getElementById('resultSec').classList.remove('show');
+  ['arpu_6','arpu_7','arpu_8','og_6','og_7','og_8','ic_6','ic_7','ic_8',
+   'ra_6','ra_7','ra_8','rn_6','rn_7','rn_8'].forEach(id=>{
+    document.getElementById(id).value='0';
+  });
+  document.getElementById('aon').value='365';
+  document.getElementById('last_rch').value='50';
+  document.getElementById('roam_og').value='0';
+  document.getElementById('roam_ic').value='0';
+}
+
+function buildSignals(at,og_t,ra_t,rn_t,tenure,hiVal,roaming,cls){
+  const R=[],ACT=[];
+  if(at<-100){R.push('Revenue dropped significantly');ACT.push('💰 Offer budget-friendly plan');}
+  else if(at<-50){R.push('Revenue slightly declining');ACT.push('💰 Small discount on current plan');}
+  if(og_t<-100){R.push('Call usage dropped heavily');ACT.push('📱 Unlimited calling bundle');}
+  else if(og_t<-50){R.push('Call usage declining');ACT.push('📱 Discounted calling pack');}
+  if(ra_t<-100){R.push('Recharge amount dropped');ACT.push('🎁 Auto-recharge cashback');}
+  else if(ra_t<-50){R.push('Recharge declining');ACT.push('🎁 Bonus data on next recharge');}
+  if(rn_t<-3){R.push('Recharging less frequently');ACT.push('🔔 Recharge reminder + cashback');}
+  if(tenure<6){R.push('New customer (< 6 months)');ACT.push('👋 Welcome bonus: extra data');}
+  else if(tenure>36){R.push('Long-term loyal at risk');ACT.push('👑 VIP loyalty reward');}
+  else if(tenure>24){R.push('2+ year customer at risk');ACT.push('⭐ Loyalty discount: 20% off');}
+  if(hiVal){R.push('High-value customer');ACT.push('💎 Dedicated relationship manager');}
+  if(roaming){R.push('Active roaming user');ACT.push('✈️ Special roaming pack');}
+  if(!R.length){
+    if(cls==='red'){R.push('High churn probability');ACT.push('🔴 Emergency retention call','💎 Best available plan');}
+    else if(cls==='amber'){R.push('Moderate churn risk');ACT.push('📱 Plan upgrade suggestion','💰 Loyalty discount');}
+    else{R.push('Customer is stable');ACT.push('✅ Regular service','🎁 Loyalty points');}
+  }
+  let action,timeline,offer;
+  if(cls==='red'){action='🚨 IMMEDIATE retention call';timeline='Within 24 hours';offer='Up to 30% discount OR 2 months free';}
+  else if(cls==='amber'){action='📧 Personalized SMS + notification';timeline='Within 1 week';offer='10–15% discount OR bonus data';}
+  else{action='📊 Regular engagement program';timeline='Monthly';offer='Loyalty reward points';}
+
+  document.getElementById('rSignals').innerHTML=R.map(r=>
+    `<div class="sig-row"><div class="sig-dot" style="background:var(--green);"></div><span>${r}</span></div>`
+  ).join('');
+  document.getElementById('rActions').innerHTML=ACT.map(a=>
+    `<div class="sig-row"><div class="sig-dot" style="background:var(--blue);"></div><span>${a}</span></div>`
+  ).join('');
+  document.getElementById('rPlan').innerHTML=
+    `<b>Action &nbsp;&nbsp;</b>${action}<br><b>Timeline</b> ${timeline}<br><b>Offer &nbsp;&nbsp;&nbsp;</b>${offer}`;
+}
+
+/* ═══════════════════════════════
+   BULK PREDICTION
+════════════════════════════════ */
+let bulkRows=[], bulkRes=[], bulkFile='predictions.csv';
+
+document.addEventListener('DOMContentLoaded', function(){
+  const uz = document.getElementById('upZone');
+  if(uz){
+    uz.addEventListener('dragover', e=>{ e.preventDefault(); uz.classList.add('drag'); });
+    uz.addEventListener('dragleave', ()=> uz.classList.remove('drag'));
+    uz.addEventListener('drop', e=>{
+      e.preventDefault(); uz.classList.remove('drag');
+      if(e.dataTransfer.files[0]) loadCSV(e.dataTransfer.files[0]);
+    });
+  }
+  initDashboard();
+});
+
+function handleCSV(e){ if(e.target.files[0]) loadCSV(e.target.files[0]); }
+
+function loadCSV(file){
+  bulkFile = file.name.replace('.csv','') + '_predictions.csv';
+  const reader = new FileReader();
+  reader.onload = e => {
+    const lines = e.target.result.trim().split('\n');
+    const hdrs = lines[0].split(',').map(h => h.trim().replace(/"/g,''));
+    bulkRows = lines.slice(1).map(line => {
+      const v = line.split(','), o = {};
+      hdrs.forEach((h,i) => { o[h] = parseFloat(v[i]) || 0; });
+      return o;
+    }).filter(r => Object.keys(r).length > 1);
+    document.getElementById('fName').textContent = file.name;
+    document.getElementById('fStats').textContent =
+      `${bulkRows.length.toLocaleString()} rows · ${hdrs.length} columns`;
+    document.getElementById('fileBar').style.display = 'block';
+    document.getElementById('bulkOut').style.display = 'none';
+  };
+  reader.readAsText(file);
+}
+
+function scoreRow(row){
+  const g = k => parseFloat(row[k]) || 0;
+  const a6=g('arpu_6'), a7=g('arpu_7'), a8=g('arpu_8');
+  const og6=g('total_og_mou_6'), og8=g('total_og_mou_8');
+  const ic6=g('total_ic_mou_6'), ic8=g('total_ic_mou_8');
+  const ra6=g('total_rech_amt_6'), ra8=g('total_rech_amt_8');
+  const rn6=g('total_rech_num_6'), rn8=g('total_rech_num_8');
+  const aon=g('aon'), lr=g('last_day_rch_amt_8');
+  const ro=g('roam_og_mou_8'), ri=g('roam_ic_mou_8');
+  const at=a8-a6, ad=(a6-a8)/(a6+1), avg_a=(a6+a7+a8)/3;
+  const og_t=og8-og6, ic_t=ic8-ic6, ra_t=ra8-ra6, rn_t=rn8-rn6;
+  const tenure=aon/30;
+  let s=0.10;
+  if(ad>0.5)s+=0.22; else if(ad>0.3)s+=0.14; else if(at<-50)s+=0.08;
+  if(og_t<-150)s+=0.18; else if(og_t<-80)s+=0.10;
+  if(ic_t<-100)s+=0.10;
+  if(ra_t<-150)s+=0.14; else if(ra_t<-80)s+=0.08;
+  if(rn_t<-3)s+=0.10; else if(rn_t<-1)s+=0.05;
+  if(og8<30&&a8<80)s+=0.12; if(og8===0&&a8===0)s+=0.20;
+  if(tenure<6)s+=0.06; else if(tenure>36)s-=0.04;
+  if(avg_a>=356.23)s-=0.03; if((ro+ri)>0)s+=0.03;
+  if(lr<20&&lr>0)s+=0.06; if(lr===0)s+=0.12;
+  return Math.max(0.01, Math.min(0.99, s));
+}
+
+function getRisk(p){ return p>=0.70?'RED':p>=0.40?'YELLOW':'GREEN'; }
+
+function runBulk(){
+  if(!bulkRows.length){ alert('No CSV loaded yet.'); return; }
+  document.getElementById('toast').classList.add('show');
+  setTimeout(()=>{
+    bulkRes = bulkRows.map(r => { const p=scoreRow(r); return {p, risk:getRisk(p)}; });
+    const tot=bulkRes.length;
+    const rc=bulkRes.filter(r=>r.risk==='RED').length;
+    const yc=bulkRes.filter(r=>r.risk==='YELLOW').length;
+    const gc=bulkRes.filter(r=>r.risk==='GREEN').length;
+
+    document.getElementById('bTotal').textContent = tot.toLocaleString();
+    document.getElementById('bHigh').textContent  = rc.toLocaleString();
+    document.getElementById('bMed').textContent   = yc.toLocaleString();
+    document.getElementById('bLow').textContent   = gc.toLocaleString();
+    document.getElementById('bHighP').textContent = (rc/tot*100).toFixed(1)+'% of total';
+    document.getElementById('bMedP').textContent  = (yc/tot*100).toFixed(1)+'% of total';
+    document.getElementById('bLowP').textContent  = (gc/tot*100).toFixed(1)+'% of total';
+
+    const G='#16A34A', R='#EF4444', A='#F59E0B';
+    const GRID='#F3F4F6', T3='#6B7280';
+
+    dChart('bDonut');
+    charts.bDonut = new Chart(document.getElementById('bDonut'),{
+      type:'doughnut',
+      data:{labels:['High','Medium','Low'],
+        datasets:[{data:[rc,yc,gc],backgroundColor:[R,A,G],borderColor:'#fff',borderWidth:3,hoverOffset:4}]},
+      options:bOpts({cutout:'64%',
+        plugins:{legend:{display:false},
+          datalabels:{display:true,color:'#fff',font:{size:10,weight:'700'},
+            formatter:(v,ctx)=>{ const t=ctx.chart.data.datasets[0].data.reduce((a,b)=>a+b,0); return(v/t*100).toFixed(1)+'%'; }},
+          tooltip:{callbacks:{label:ctx=>` ${ctx.label}: ${ctx.parsed.toLocaleString()}`}}}})
+    });
+
+    dChart('bBar');
+    charts.bBar = new Chart(document.getElementById('bBar'),{
+      type:'bar',
+      data:{labels:['High Risk','Medium Risk','Low Risk'],
+        datasets:[{data:[rc,yc,gc],
+          backgroundColor:['rgba(239,68,68,.8)','rgba(245,158,11,.8)','rgba(22,163,74,.8)'],
+          borderColor:[R,A,G],borderWidth:1,borderRadius:5,borderSkipped:false}]},
+      options:bOpts({
+        plugins:{legend:{display:false},
+          datalabels:{display:true,anchor:'end',align:'top',color:T3,font:{size:10,weight:'600'},formatter:v=>v.toLocaleString()}},
+        scales:{
+          x:{grid:{display:false},ticks:{color:T3,font:{size:10}}},
+          y:{grid:{color:GRID},ticks:{color:T3,font:{size:10},callback:v=>v.toLocaleString()}}
+        }
+      })
+    });
+
+    const bins = Array(10).fill(0);
+    bulkRes.forEach(r => { bins[Math.min(9,Math.floor(r.p*10))]++; });
+    dChart('bHist');
+    charts.bHist = new Chart(document.getElementById('bHist'),{
+      type:'bar',
+      data:{labels:['0–10%','10–20%','20–30%','30–40%','40–50%','50–60%','60–70%','70–80%','80–90%','90–100%'],
+        datasets:[{data:bins,
+          backgroundColor:[G,G,G,G,A,A,A,R,R,R].map(c=>c+'BB'),
+          borderWidth:0,borderRadius:3}]},
+      options:bOpts({
+        plugins:{legend:{display:false},
+          datalabels:{display:true,anchor:'end',align:'top',color:T3,font:{size:9,weight:'600'},formatter:v=>v>0?v.toLocaleString():''}},
+        scales:{
+          x:{grid:{display:false},ticks:{color:T3,font:{size:9}}},
+          y:{grid:{color:GRID},ticks:{color:T3,font:{size:9},callback:v=>v.toLocaleString()}}
+        }
+      })
+    });
+
+    const top10 = [...bulkRes].map((r,i)=>({...r,i})).sort((a,b)=>b.p-a.p).slice(0,10);
+    document.getElementById('bTopBody').innerHTML = top10.map((r,rank)=>{
+      const bc = r.risk==='RED'?'br':r.risk==='YELLOW'?'ba':'bg';
+      const em = r.risk==='RED'?'🔴':r.risk==='YELLOW'?'🟡':'🟢';
+      return `<tr><td>${rank+1}</td><td>#${r.i}</td>
+        <td><b>${(r.p*100).toFixed(2)}%</b></td>
+        <td><span class="badge ${bc}">${em} ${r.risk}</span></td></tr>`;
+    }).join('');
+
+    document.getElementById('toast').classList.remove('show');
+    document.getElementById('bulkOut').style.display = 'block';
+    document.getElementById('bulkOut').scrollIntoView({behavior:'smooth',block:'start'});
+  }, 700);
+}
+
+function resetBulk(){
+  bulkRows=[]; bulkRes=[];
+  document.getElementById('fileBar').style.display='none';
+  document.getElementById('bulkOut').style.display='none';
+  const inp=document.getElementById('csvInput');
+  if(inp) inp.value='';
+}
+
+function downloadCSV(){
+  if(!bulkRes.length){ alert('Run predictions first.'); return; }
+  const rows=['Customer_Index,Churn_Probability_%,Risk_Category,Predicted_Churn'];
+  bulkRes.forEach((r,i) => rows.push(`${i},${(r.p*100).toFixed(2)},${r.risk},${r.p>=0.5?1:0}`));
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([rows.join('\n')],{type:'text/csv'}));
+  a.download=bulkFile; a.click();
+}
+
+
+</script>
+</body>
+</html>

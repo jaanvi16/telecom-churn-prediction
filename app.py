@@ -1,6 +1,6 @@
 # ============================================================
 # TELECOM CUSTOMER CHURN PREDICTION SYSTEM
-# Streamlit Web Application
+# Web Application
 # ============================================================
 
 import streamlit as st

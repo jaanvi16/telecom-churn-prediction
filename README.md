@@ -5,12 +5,11 @@ for telecom companies with explainability and
 personalized retention strategies.
 
 ![Python](https://img.shields.io/badge/Python-3.13-blue)
-![Streamlit](https://img.shields.io/badge/Streamlit-1.46-red)
 ![XGBoost](https://img.shields.io/badge/XGBoost-3.2-green)
 ![SHAP](https://img.shields.io/badge/SHAP-0.51-orange)
 
 ## 🔗 Live Demo
-[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://your-app.streamlit.app)
+[Web App](https://telecom-churn-prediction-main.vercel.app/)
 
 ## 🎯 Project Overview
 
@@ -57,7 +56,7 @@ This system helps telecom companies:
    - 99,999 real Indian customers
    - ARPU in Indian Rupees (₹)
 
-## 🏗️ Project Structure
+##  Project Structure
 Telecom_churn_project/
 │
 ├── app.py ← Streamlit Web App
@@ -95,7 +94,7 @@ Telecom_churn_project/
 | Plotly | Interactive Charts |
 | Google Colab | Model Training |
 
-## 📋 Methodology
+##  Methodology
 Raw Data (99,999 × 226)
 ↓
 Data Preprocessing
@@ -114,4 +113,4 @@ Risk Segmentation (RED/YELLOW/GREEN)
 ↓
 Retention Strategy Engine
 ↓
-Streamlit Web App
+Web App
